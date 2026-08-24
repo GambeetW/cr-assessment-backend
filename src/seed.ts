@@ -62,7 +62,12 @@ export const changeRequests: ChangeRequest[] = [
 		workspaceId: 'ws-1',
 		type: ['ITEMS'],
 		status: CrStatus.DRAFT,
-		draftChanges: { lineItems: [{ sku: 'A', quantity: 11, unitPrice: 500 }, { sku: 'B', quantity: 30, unitPrice: 100 }] }, // +500
+		draftChanges: {
+			lineItems: [
+				{ sku: 'A', quantity: 11, unitPrice: 500 },
+				{ sku: 'B', quantity: 30, unitPrice: 100 },
+			],
+		}, // +500
 		totals: emptyTotals,
 		approvals: [],
 		version: 1,
@@ -76,7 +81,12 @@ export const changeRequests: ChangeRequest[] = [
 		workspaceId: 'ws-1',
 		type: ['ITEMS'],
 		status: CrStatus.PENDING_APPROVAL,
-		draftChanges: { lineItems: [{ sku: 'A', quantity: 11, unitPrice: 500 }, { sku: 'B', quantity: 30, unitPrice: 100 }] }, // +500 (<= threshold)
+		draftChanges: {
+			lineItems: [
+				{ sku: 'A', quantity: 11, unitPrice: 500 },
+				{ sku: 'B', quantity: 30, unitPrice: 100 },
+			],
+		}, // +500 (<= threshold)
 		totals: { baselineTotal: 8000, newTotal: 8500, delta: 500 },
 		approvals: [],
 		version: 1,
@@ -90,7 +100,12 @@ export const changeRequests: ChangeRequest[] = [
 		workspaceId: 'ws-1',
 		type: ['ITEMS'],
 		status: CrStatus.PENDING_APPROVAL,
-		draftChanges: { lineItems: [{ sku: 'A', quantity: 18, unitPrice: 500 }, { sku: 'B', quantity: 30, unitPrice: 100 }] }, // +4000 (> threshold)
+		draftChanges: {
+			lineItems: [
+				{ sku: 'A', quantity: 18, unitPrice: 500 },
+				{ sku: 'B', quantity: 30, unitPrice: 100 },
+			],
+		}, // +4000 (> threshold)
 		totals: { baselineTotal: 8000, newTotal: 12000, delta: 4000 },
 		approvals: [],
 		version: 1,
