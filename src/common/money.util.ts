@@ -5,9 +5,15 @@
  * Heads-up: one of the helpers here has a defect that surfaces in `test/cr-totals.spec.ts`.
  */
 
-/** Round a value to 2 decimal places. */
+/**
+ * Round a value to 2 decimal places (nearest cent, half away from zero).
+ *
+ * `Math.round` alone rounds negative halves toward +∞ (e.g. -0.005 -> -0.00), which would bias
+ * negative deltas; rounding the absolute value and re-applying the sign keeps money symmetric.
+ */
 export function round2(value: number): number {
-	return Math.trunc(value * 100) / 100;
+	const rounded = Math.round(Math.abs(value) * 100) / 100;
+	return value < 0 ? -rounded : rounded;
 }
 
 /** Sum a list of monetary amounts. */
