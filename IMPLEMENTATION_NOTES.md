@@ -1,5 +1,10 @@
 # Implementation Notes
 
+**Summary:** all 20 tests pass from a clean `npm ci`; money rounds to the nearest cent
+symmetrically; only legal transitions occur and terminal states are immutable; large deltas
+resolve via committee (majority + head); budget can never be overspent; org isolation is
+enforced at the repo choke point; every state change is audited.
+
 ## 1. What I changed
 
 - **Task 1a — money defect:** `round2()` used `Math.trunc`, silently dropping sub-cent amounts (3 × 6.669 = 20.007 → 20.00). Replaced with nearest-cent rounding, half-away-from-zero so negative deltas round symmetrically (`Math.round(-0.5)` in JS rounds toward +∞, which would bias credits vs. charges).
@@ -8,7 +13,7 @@
 - **Task 2:** implemented `sendForApproval`, `approve`, `returnToDraft`, `reject`, `apply` with policy gates, guarded transitions, budget check/update on apply, agreement amendment on apply, an audit entry per transition, and a version bump per mutation.
 - **Task 3:** committee initialization + routing in `sendForApproval` when `|delta| > COMMITTEE_DELTA_THRESHOLD`; `castVote` with membership/single-vote checks and early resolution via `COMMITTEE_DECISION`.
 - **Task 4:** action authorization helper (`cr_{action}_{scope}`, widest scope wins: `o` → org, `w` → own workspace, `u` → own CRs); `get`/`list` additionally honor read scope on top of the repo's org choke point.
-- **Task 5:** `test/cr-service.spec.ts` — 15 invariant-focused tests (20 total with the originals).
+- **Task 5:** `test/cr-service.spec.ts` — 15 invariant-focused tests, alongside the 5 scaffold tests (2 of which shipped failing on purpose): 20 total.
 
 ## 2. Domain model
 
@@ -35,7 +40,7 @@ I tested the invariants above rather than chasing coverage: one full happy path 
 
 ## 5. Assumptions / judgment calls
 
-- **`returnToDraft` performs both hops** (`PENDING_APPROVAL → RETURNED → DRAFT`, two audit entries) since the brief says a return goes "back to DRAFT for editing" and no separate "reopen" action exists.
+- **`returnToDraft` performs both hops** (`PENDING_APPROVAL → RETURNED → DRAFT`, two audit entries) since the brief says a return goes "back to DRAFT for editing" and no separate "reopen" action exists. Passing through RETURNED (rather than jumping straight to DRAFT) keeps the return itself as a recorded, audited state before the CR becomes editable.
 - **Reject/cancel from any non-terminal state**, per the README diagram's "any non-terminal → REJECTED / CANCELLED" — including `APPROVED` (an approved-but-not-yet-applied CR can still be withdrawn).
 - **`apply` recomputes totals from the live agreement** before the budget check, so the budget is charged for the delta as it stands at apply time, not a stale approval-time figure.
 - **Applying amends the agreement** (line items, total, end date). The brief doesn't state it explicitly, but an applied amendment that never touches the agreement would be meaningless.
@@ -46,8 +51,16 @@ I tested the invariants above rather than chasing coverage: one full happy path 
 
 ## 6. Where I used AI
 
-I used Claude (Anthropic) as a pair programmer throughout: reading the scaffold, locating the two seeded defects and the `findOne` scoping gap, drafting the service implementation and the test suite, and drafting these notes. I directed the design decisions listed in §5, reviewed every line, and verified behavior by running the suite, lint, format, and build from a clean install. All code was AI-assisted rather than handwritten; I can walk through and modify any part of it.
+I used Claude (Anthropic) as a pair programmer throughout: reading the scaffold, locating the two seeded defects and the `findOne` scoping gap, drafting the service implementation and the test suite, and drafting these notes. I directed the design decisions listed in §5, reviewed every line, and verified behavior by running the suite, lint, format, and build from a clean install. No components were fully handwritten; all code was AI-assisted with my direction and review, and I can walk through and modify any part of it.
 
 ## 7. What I'd improve with more time
 
 The riskiest part is **`apply`'s check-then-update on the budget**: safe in this synchronous in-memory model, but racy against a real database — two concurrent applies could both pass the balance check. I'd move to an atomic conditional update (e.g. `findOneAndUpdate` with `balance: { $gte: delta }` decrementing in the same operation) and use the existing `version`/`CONFLICT` machinery for optimistic locking on the CR itself. Next: expose `cancel`, per-agreement committee/threshold configuration instead of a global constant, a currency assertion between budget and agreement, and property-based tests for the money helpers.
+
+## How to verify
+
+```bash
+npm ci && npm test   # 20/20 from a clean install
+npm run build        # type-checks and compiles
+npm run lint         # 0 errors
+```
